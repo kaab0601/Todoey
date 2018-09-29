@@ -10,10 +10,14 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
 
-    let itemArray = ["By Eggs", "Buy some meat", "Buy some fish"]
+    var itemArray = ["By Eggs", "Buy some meat", "Buy some fish"]
+    let defaults = UserDefaults.standard
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        if let item = self.defaults.array(forKey: "NewItemEntered") as? [String] {
+        itemArray = item
+        }
     }
     
     //MARK - TableView Datasource Methods
@@ -46,6 +50,25 @@ class TodoListViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
-
+    @IBAction func addNewItem(_ sender: Any) {
+        var NewItemEntered = UITextField()
+        
+        let alert = UIAlertController(title: "Enter a New Item", message: "", preferredStyle: .alert)
+        let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+            self.itemArray.append(NewItemEntered.text!)
+            self.tableView.reloadData()
+            self.defaults.set(self.itemArray, forKey: "NewItemEntered")
+        }
+        alert.addTextField { (alertTexField) in
+            alertTexField.placeholder = "Enter a New Item"
+            NewItemEntered = alertTexField
+    
+        }
+        
+        alert.addAction(action)
+        
+        present(alert, animated: true, completion: nil)
+    }
+    
 }
 
