@@ -7,11 +7,15 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController {
     
-    var itemArray = [Item]()
+    var itemArray = [Items]()
       let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+    
+    // create a delegate for saving values
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -56,11 +60,13 @@ class TodoListViewController: UITableViewController {
         
         let alert = UIAlertController(title: "Enter a New Item", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            let newItemPresent = Item()
-            newItemPresent.title = NewItemEntered.text!
-            self.itemArray.append(newItemPresent)
-            self.tableView.reloadData()
-            self.saveData()
+      
+        let newItem = Items(context: self.context)  // Declare a new item variable object of the database
+        newItem.title = NewItemEntered.text! // load the variables
+        newItem.done = false
+        self.itemArray.append(newItem)
+        self.tableView.reloadData()
+        self.saveData()
     
         }
         alert.addTextField { (alertTexField) in
@@ -77,12 +83,9 @@ class TodoListViewController: UITableViewController {
     /* function to save data to the plist database */
     func saveData()
     {
-        let encoder = PropertyListEncoder()
-        
         do
         {
-            let data = try encoder.encode(self.itemArray)
-            try data.write(to: self.dataFilePath!)
+            try context.save()
         }catch{
             
         }
@@ -93,18 +96,12 @@ class TodoListViewController: UITableViewController {
     /* function to load data from the plist database */
     func loadData()
     {
-       if let data = try? Data(contentsOf: dataFilePath!)
-       {
-        
-            let decoder = PropertyListDecoder()
-        
-            do
-            {
-                itemArray = try decoder.decode([Item].self, from: data)
-            }catch{
+        let request : NSFetchRequest<Items> = Items.fetchRequest()
+        do {
+            itemArray = try context.fetch(request)
+        }catch{
             
-            }
-       }
+        }
     }
     
     /* End of Load data function*/
