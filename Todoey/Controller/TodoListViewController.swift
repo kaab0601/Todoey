@@ -8,19 +8,25 @@
 
 import UIKit
 import CoreData
+import RealmSwift
 
 class TodoListViewController: UITableViewController {
     
     var itemArray = [Items]()
-      let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+    //  let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
     
+    var selectedCategory : Category?{
+        didSet{
+             loadData()
+        }
+    }
     // create a delegate for saving values
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        loadData()
+       
         
   
        // print(dataFilePath)
@@ -53,6 +59,7 @@ class TodoListViewController: UITableViewController {
         tableView.reloadData()
         self.saveData()
         tableView.deselectRow(at: indexPath, animated: true)
+        
     }
     
     @IBAction func addNewItem(_ sender: Any) {
@@ -64,6 +71,7 @@ class TodoListViewController: UITableViewController {
         let newItem = Items(context: self.context)  // Declare a new item variable object of the database
         newItem.title = NewItemEntered.text! // load the variables
         newItem.done = false
+        newItem.parentCategory = self.selectedCategory
         self.itemArray.append(newItem)
         self.tableView.reloadData()
         self.saveData()
@@ -85,6 +93,7 @@ class TodoListViewController: UITableViewController {
     {
         do
         {
+            
             try context.save()
         }catch{
             
@@ -94,17 +103,69 @@ class TodoListViewController: UITableViewController {
     
     
     /* function to load data from the plist database */
-    func loadData()
+    func loadData(with request : NSFetchRequest<Items> = Items.fetchRequest(),with predicate : NSPredicate? = nil)
     {
-        let request : NSFetchRequest<Items> = Items.fetchRequest()
+        let categoryPredicate = NSPredicate(format: "parentCategory.name CONTAINS[cd] %@", selectedCategory!.name!)
+        if let additionPredicate = predicate{
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate,additionPredicate])
+        }
+        else{
+            request.predicate = categoryPredicate
+        }
+        
         do {
             itemArray = try context.fetch(request)
         }catch{
             
         }
+        tableView.reloadData()
     }
     
-    /* End of Load data function*/
     
+    
+
+    /* End of Load data function*/
 }
 
+extension TodoListViewController: UISearchBarDelegate {
+    
+    
+   
+    //this function will be call when the search button is pressed on the keypad
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+       let request : NSFetchRequest<Items> = Items.fetchRequest()
+       let searchPredicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        loadData(with:request,with:searchPredicate)
+        
+    }
+    
+    //end of keypad search button function
+    
+    // this function is called whenever a letter is added or removed from the search text
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0
+        {
+            loadData()
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+            
+        }
+        else{
+            let request : NSFetchRequest<Items> = Items.fetchRequest()
+            let searchPredicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+            request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+            loadData(with:request,with:searchPredicate)
+        }
+    }
+    
+   @objc func tableViewTapped()
+    {
+        print("got it")
+    }
+    
+    //end of the text search funtion
+ 
+}
